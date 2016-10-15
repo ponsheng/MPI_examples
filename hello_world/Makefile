@@ -2,10 +2,10 @@
 PROC = 8 
 EXE= hello
 
-all: $(EXE).c
-	mpiicc -g -Wall -o $(EXE) $(EXE).c
+$(EXE): main.c
+	mpiicc -g -Wall -o $(EXE) main.c
 
-run:
+run: $(EXE)
 	mpiexec -n $(PROC) ./$(EXE)
 
 boot:
