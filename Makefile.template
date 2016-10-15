@@ -1,0 +1,15 @@
+
+PROC = 8 
+EXE= 
+
+all: $(EXE).c
+	mpiicc -o $(EXE) $(EXE).c
+
+run:
+	mpiexec -n $(PROC) ./$(EXE)
+
+boot:
+	mpdboot -n 4
+
+trace:
+	mpdtrace
