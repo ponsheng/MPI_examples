@@ -1,13 +1,14 @@
 
-PROC = 16
+PROC = 1
 EXE= circuit
-COMM = 1 #1  SERIAL 2 TREE
+COMM = 2 #1  SERIAL 2 TREE
 
 $(EXE): main.c
 	mpiicc -g -Wall -DCOMM=$(COMM) -o $(EXE) main.c
 
-run: $(EXE)
+run: $(EXE) 
 	mpiexec -n $(PROC) ./$(EXE)
+
 
 boot:
 	mpdboot -n 4

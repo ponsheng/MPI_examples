@@ -13,3 +13,6 @@ boot:
 
 trace:
 	mpdtrace
+
+clean:
+	rm $(EXE)

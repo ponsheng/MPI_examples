@@ -26,26 +26,27 @@ int checkCircuit (int, long);
 int main (int argc, char *argv[]) {
    	long i;               /* loop variable (64 bits) */
    	int count = 0;        /* number of solutions */
-	int comm_size;
+	int comm_size_tmp;
 	int my_id;
 		
 
 	MPI_Init(NULL,NULL);
-	MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+	MPI_Comm_size(MPI_COMM_WORLD, &comm_size_tmp);
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
 	i = my_id;
+	const int comm_size = comm_size_tmp; //It's so wired that comm_size change sometimes 
 
 	if(my_id == 0)
 		printf("Communication method: %s\n",xstr (COMM_type));
 
 	double startTime = 0.0, totalTime = 0.0;
     startTime = MPI_Wtime();
-	for(; i<UINT_MAX/25536;i+=comm_size)
+	for(; i<UINT_MAX;i+=comm_size)
 	{
 		count += checkCircuit (my_id, i);
 	}
 	totalTime = MPI_Wtime() - startTime;
-    printf("Process %d finished in time %f secs. comm_size: %d\n", my_id, totalTime, comm_size);
+    printf("Process %d finished in time %f secs.\n", my_id, totalTime);
 	fflush (stdout);
 
 #if COMM == 2
@@ -53,30 +54,27 @@ int main (int argc, char *argv[]) {
 	int a;
 	int total_count = count;
 	int half;
+
 	while(index  < comm_size)
 	{
 		index *= 2;
 		half = index/2;
-		if(my_id == 0)
-			printf("id = 0 ,%d %d %d",index ,half,comm_size);
 		if(my_id % index == 0)
 		{
-			//printf("Rev index: %d \n",index);
 			MPI_Recv(&count, sizeof(int), MPI_INT, my_id + half, 0,
                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			total_count += count;
-			//printf("%d recev from %d\n", my_id, my_id + half);
 		}
 		else if((my_id % index) == half)
 		{
-			//printf("Send index: %d \n",index);
 			MPI_Send(&total_count,sizeof(int),MPI_INT, my_id - half, 0, MPI_COMM_WORLD);
 		}
 	}
-	//printf("jump out while %d %d %d \n",index,my_id, comm_size);
 	if(my_id ==0 )
 	{
 		printf("\nA total of %d solutions were found.\n\n", total_count);
+        totalTime = MPI_Wtime() - startTime;
+        printf("Total elapsed :time %f secs.\n", totalTime);
 	}
 	
 	
@@ -94,7 +92,6 @@ int main (int argc, char *argv[]) {
             printf("receive from %d \n",q);
         }
 		printf("\nA total of %d solutions were found.\n", total_count);
-		printf("Compute over\n");
 		totalTime = MPI_Wtime() - startTime;
     	printf("Total elapsed :time %f secs.\n", totalTime);
     }
