@@ -9,15 +9,15 @@
 
 using namespace std;
 
-//©w¸q¥­·Æ¹Bºâªº¦¸¼Æ
+//Â©wÅ¾qÂ¥Â­Â·Ã†Â¹BÂºÃ¢ÂªÂºÅ Å¾Å’Ã†
 #define NSmooth 1000
 
 /*********************************************************/
-/*ÅÜ¼Æ«Å§i¡G                                             */
-/*  bmpHeader    ¡G BMPÀÉªº¼ĞÀY                          */
-/*  bmpInfo      ¡G BMPÀÉªº¸ê°T                          */
-/*  **BMPSaveData¡G Àx¦s­n³Q¼g¤Jªº¹³¯À¸ê®Æ               */
-/*  **BMPData    ¡G ¼È®ÉÀx¦s­n³Q¼g¤Jªº¹³¯À¸ê®Æ           */
+/*Ã…ÃœÅ’Ã†Â«Ã…Â§iÂ¡G                                             */
+/*  bmpHeader    Â¡G BMPÃ€Ã‰ÂªÂºÅ’ÃÃ€Y                          */
+/*  bmpInfo      Â¡G BMPÃ€Ã‰ÂªÂºÅ¾ÃªÂ°T                          */
+/*  **BMPSaveDataÂ¡G Ã€xÅ sÂ­nÂ³QÅ’gâ‚¬JÂªÂºÂ¹Â³Â¯Ã€Å¾ÃªÂ®Ã†               */
+/*  **BMPData    Â¡G Å’ÃˆÂ®Ã‰Ã€xÅ sÂ­nÂ³QÅ’gâ‚¬JÂªÂºÂ¹Â³Â¯Ã€Å¾ÃªÂ®Ã†           */
 /*********************************************************/
 BMPHEADER bmpHeader;                        
 BMPINFO bmpInfo;
@@ -25,11 +25,11 @@ RGBTRIPLE **BMPSaveData = NULL;
 RGBTRIPLE **BMPData = NULL;                                                   
 
 /*********************************************************/
-/*¨ç¼Æ«Å§i¡G                                             */
-/*  readBMP    ¡G Åª¨ú¹ÏÀÉ¡A¨Ã§â¹³¯À¸ê®ÆÀx¦s¦bBMPSaveData*/
-/*  saveBMP    ¡G ¼g¤J¹ÏÀÉ¡A¨Ã§â¹³¯À¸ê®ÆBMPSaveData¼g¤J  */
-/*  swap       ¡G ¥æ´«¤G­Ó«ü¼Ğ                           */
-/*  **alloc_memory¡G °ÊºA¤À°t¤@­ÓY * X¯x°}               */
+/*Å¡Ã§Å’Ã†Â«Ã…Â§iÂ¡G                                             */
+/*  readBMP    Â¡G Ã…ÂªÅ¡ÃºÂ¹ÃÃ€Ã‰Â¡AÅ¡ÃƒÂ§Ã¢Â¹Â³Â¯Ã€Å¾ÃªÂ®Ã†Ã€xÅ sÅ bBMPSaveData*/
+/*  saveBMP    Â¡G Å’gâ‚¬JÂ¹ÃÃ€Ã‰Â¡AÅ¡ÃƒÂ§Ã¢Â¹Â³Â¯Ã€Å¾ÃªÂ®Ã†BMPSaveDataÅ’gâ‚¬J  */
+/*  swap       Â¡G Â¥Ã¦Å½Â«â‚¬GÂ­Ã“Â«Ã¼Å’Ã                           */
+/*  **alloc_memoryÂ¡G Â°ÃŠÂºAâ‚¬Ã€Â°tâ‚¬@Â­Ã“Y * XÂ¯xÂ°}               */
 /*********************************************************/
 int readBMP( char *fileName);        //read file
 int saveBMP( char *fileName);        //save file
@@ -39,11 +39,11 @@ RGBTRIPLE **alloc_memory( int Y, int X );        //allocate memory
 int main(int argc,char *argv[])
 {
 /*********************************************************/
-/*ÅÜ¼Æ«Å§i¡G                                             */
-/*  *infileName  ¡G Åª¨úÀÉ¦W                             */
-/*  *outfileName ¡G ¼g¤JÀÉ¦W                             */
-/*  startwtime   ¡G °O¿ı¶}©l®É¶¡                         */
-/*  endwtime     ¡G °O¿ıµ²§ô®É¶¡                         */
+/*Ã…ÃœÅ’Ã†Â«Ã…Â§iÂ¡G                                             */
+/*  *infileName  Â¡G Ã…ÂªÅ¡ÃºÃ€Ã‰Å W                             */
+/*  *outfileName Â¡G Å’gâ‚¬JÃ€Ã‰Å W                             */
+/*  startwtime   Â¡G Â°OÂ¿Ã½Â¶}Â©lÂ®Ã‰Â¶Â¡                         */
+/*  endwtime     Â¡G Â°OÂ¿Ã½ÂµÂ²Â§Ã´Â®Ã‰Â¶Â¡                         */
 /*********************************************************/
 	char *infileName = "input.bmp";
      	char *outfileName = "output2.bmp";
@@ -51,34 +51,34 @@ int main(int argc,char *argv[])
 
 	MPI_Init(&argc,&argv);
 	
-	//°O¿ı¶}©l®É¶¡
+	//Â°OÂ¿Ã½Â¶}Â©lÂ®Ã‰Â¶Â¡
 	startwtime = MPI_Wtime();
 
-	//Åª¨úÀÉ®×
+	//Ã…ÂªÅ¡ÃºÃ€Ã‰Â®Ã—
         if ( readBMP( infileName) )
                 cout << "Read file successfully!!" << endl;
         else 
                 cout << "Read file fails!!" << endl;
 
-	//°ÊºA¤À°t°O¾ĞÅéµ¹¼È¦sªÅ¶¡
+	//Â°ÃŠÂºAâ‚¬Ã€Â°tÂ°OÅ¸ÃÃ…Ã©ÂµÂ¹Å’ÃˆÅ sÂªÃ…Â¶Â¡
         BMPData = alloc_memory( bmpInfo.biHeight, bmpInfo.biWidth);
 
-        //¶i¦æ¦h¦¸ªº¥­·Æ¹Bºâ
+        //Â¶iÅ Ã¦Å hÅ Å¾ÂªÂºÂ¥Â­Â·Ã†Â¹BÂºÃ¢
 	for(int count = 0; count < NSmooth ; count ++){
-		//§â¹³¯À¸ê®Æ»P¼È¦s«ü¼Ğ°µ¥æ´«
+		//Â§Ã¢Â¹Â³Â¯Ã€Å¾ÃªÂ®Ã†Â»PÅ’ÃˆÅ sÂ«Ã¼Å’ÃÂ°ÂµÂ¥Ã¦Å½Â«
 		swap(BMPSaveData,BMPData);
-		//¶i¦æ¥­·Æ¹Bºâ
+		//Â¶iÅ Ã¦Â¥Â­Â·Ã†Â¹BÂºÃ¢
 		for(int i = 0; i<bmpInfo.biHeight ; i++)
 			for(int j =0; j<bmpInfo.biWidth ; j++){
 				/*********************************************************/
-				/*³]©w¤W¤U¥ª¥k¹³¯Àªº¦ì¸m                                 */
+				/*Â³]Â©wâ‚¬Wâ‚¬UÂ¥ÂªÂ¥kÂ¹Â³Â¯Ã€ÂªÂºÅ Ã¬Å¾m                                 */
 				/*********************************************************/
 				int Top = i>0 ? i-1 : bmpInfo.biHeight-1;
 				int Down = i<bmpInfo.biHeight-1 ? i+1 : 0;
 				int Left = j>0 ? j-1 : bmpInfo.biWidth-1;
 				int Right = j<bmpInfo.biWidth-1 ? j+1 : 0;
 				/*********************************************************/
-				/*»P¤W¤U¥ª¥k¹³¯À°µ¥­§¡¡A¨Ã¥|±Ë¤­¤J                       */
+				/*Â»Pâ‚¬Wâ‚¬UÂ¥ÂªÂ¥kÂ¹Â³Â¯Ã€Â°ÂµÂ¥Â­Â§Â¡Â¡AÅ¡ÃƒÂ¥|Â±Ã‹â‚¬Â­â‚¬J                       */
 				/*********************************************************/
 				BMPSaveData[i][j].rgbBlue =  (double) (BMPData[i][j].rgbBlue+BMPData[Top][j].rgbBlue+BMPData[Down][j].rgbBlue+BMPData[i][Left].rgbBlue+BMPData[i][Right].rgbBlue)/5+0.5;
 				BMPSaveData[i][j].rgbGreen =  (double) (BMPData[i][j].rgbGreen+BMPData[Top][j].rgbGreen+BMPData[Down][j].rgbGreen+BMPData[i][Left].rgbGreen+BMPData[i][Right].rgbGreen)/5+0.5;
@@ -86,13 +86,13 @@ int main(int argc,char *argv[])
 			}
 	}
  
- 	//¼g¤JÀÉ®×
+ 	//Å’gâ‚¬JÃ€Ã‰Â®Ã—
         if ( saveBMP( outfileName ) )
                 cout << "Save file successfully!!" << endl;
         else
                 cout << "Save file fails!!" << endl;
 	
-	//±o¨ìµ²§ô®É¶¡¡A¨Ã¦L¥X°õ¦æ®É¶¡
+	//Â±oÅ¡Ã¬ÂµÂ²Â§Ã´Â®Ã‰Â¶Â¡Â¡AÅ¡ÃƒÅ LÂ¥XÂ°ÃµÅ Ã¦Â®Ã‰Â¶Â¡
         endwtime = MPI_Wtime();
     	cout << "The execution time = "<< endwtime-startwtime <<endl ;
 
@@ -104,87 +104,87 @@ int main(int argc,char *argv[])
 }
 
 /*********************************************************/
-/* Åª¨ú¹ÏÀÉ                                              */
+/* Ã…ÂªÅ¡ÃºÂ¹ÃÃ€Ã‰                                              */
 /*********************************************************/
 int readBMP(char *fileName)
 {
-	//«Ø¥ß¿é¤JÀÉ®×ª«¥ó	
+	//Â«Ã˜Â¥ÃŸÂ¿Ã©â‚¬JÃ€Ã‰Â®Ã—ÂªÂ«Â¥Ã³	
         ifstream bmpFile( fileName, ios::in | ios::binary );
  
-        //ÀÉ®×µLªk¶}±Ò
+        //Ã€Ã‰Â®Ã—ÂµLÂªkÂ¶}Â±Ã’
         if ( !bmpFile ){
                 cout << "It can't open file!!" << endl;
                 return 0;
         }
  
-        //Åª¨úBMP¹ÏÀÉªº¼ĞÀY¸ê®Æ
+        //Ã…ÂªÅ¡ÃºBMPÂ¹ÃÃ€Ã‰ÂªÂºÅ’ÃÃ€YÅ¾ÃªÂ®Ã†
     	bmpFile.read( ( char* ) &bmpHeader, sizeof( BMPHEADER ) );
  
-        //§P¨M¬O§_¬°BMP¹ÏÀÉ
+        //Â§PÅ¡MÂ¬OÂ§_Â¬Â°BMPÂ¹ÃÃ€Ã‰
         if( bmpHeader.bfType != 0x4d42 ){
                 cout << "This file is not .BMP!!" << endl ;
                 return 0;
         }
  
-        //Åª¨úBMPªº¸ê°T
+        //Ã…ÂªÅ¡ÃºBMPÂªÂºÅ¾ÃªÂ°T
         bmpFile.read( ( char* ) &bmpInfo, sizeof( BMPINFO ) );
         
-        //§PÂ_¦ì¤¸²`«×¬O§_¬°24 bits
+        //Â§PÃ‚_Å Ã¬â‚¬Å¾Â²`Â«Ã—Â¬OÂ§_Â¬Â°24 bits
         if ( bmpInfo.biBitCount != 24 ){
                 cout << "The file is not 24 bits!!" << endl;
                 return 0;
         }
 
-        //­×¥¿¹Ï¤ùªº¼e«×¬°4ªº­¿¼Æ
+        //Â­Ã—Â¥Â¿Â¹Ãâ‚¬Ã¹ÂªÂºÅ’eÂ«Ã—Â¬Â°4ÂªÂºÂ­Â¿Å’Ã†
         while( bmpInfo.biWidth % 4 != 0 )
         	bmpInfo.biWidth++;
 
-        //°ÊºA¤À°t°O¾ĞÅé
+        //Â°ÃŠÂºAâ‚¬Ã€Â°tÂ°OÅ¸ÃÃ…Ã©
         BMPSaveData = alloc_memory( bmpInfo.biHeight, bmpInfo.biWidth);
         
-        //Åª¨ú¹³¯À¸ê®Æ
+        //Ã…ÂªÅ¡ÃºÂ¹Â³Â¯Ã€Å¾ÃªÂ®Ã†
     	//for(int i = 0; i < bmpInfo.biHeight; i++)
         //	bmpFile.read( (char* )BMPSaveData[i], bmpInfo.biWidth*sizeof(RGBTRIPLE));
 	bmpFile.read( (char* )BMPSaveData[0], bmpInfo.biWidth*sizeof(RGBTRIPLE)*bmpInfo.biHeight);
 	
-        //Ãö³¬ÀÉ®×
+        //ÃƒÃ¶Â³Â¬Ã€Ã‰Â®Ã—
         bmpFile.close();
  
         return 1;
  
 }
 /*********************************************************/
-/* Àx¦s¹ÏÀÉ                                              */
+/* Ã€xÅ sÂ¹ÃÃ€Ã‰                                              */
 /*********************************************************/
 int saveBMP( char *fileName)
 {
- 	//§P¨M¬O§_¬°BMP¹ÏÀÉ
+ 	//Â§PÅ¡MÂ¬OÂ§_Â¬Â°BMPÂ¹ÃÃ€Ã‰
         if( bmpHeader.bfType != 0x4d42 ){
                 cout << "This file is not .BMP!!" << endl ;
                 return 0;
         }
         
- 	//«Ø¥ß¿é¥XÀÉ®×ª«¥ó
+ 	//Â«Ã˜Â¥ÃŸÂ¿Ã©Â¥XÃ€Ã‰Â®Ã—ÂªÂ«Â¥Ã³
         ofstream newFile( fileName,  ios:: out | ios::binary );
  
-        //ÀÉ®×µLªk«Ø¥ß
+        //Ã€Ã‰Â®Ã—ÂµLÂªkÂ«Ã˜Â¥ÃŸ
         if ( !newFile ){
                 cout << "The File can't create!!" << endl;
                 return 0;
         }
  	
-        //¼g¤JBMP¹ÏÀÉªº¼ĞÀY¸ê®Æ
+        //Å’gâ‚¬JBMPÂ¹ÃÃ€Ã‰ÂªÂºÅ’ÃÃ€YÅ¾ÃªÂ®Ã†
         newFile.write( ( char* )&bmpHeader, sizeof( BMPHEADER ) );
 
-	//¼g¤JBMPªº¸ê°T
+	//Å’gâ‚¬JBMPÂªÂºÅ¾ÃªÂ°T
         newFile.write( ( char* )&bmpInfo, sizeof( BMPINFO ) );
 
-        //¼g¤J¹³¯À¸ê®Æ
+        //Å’gâ‚¬JÂ¹Â³Â¯Ã€Å¾ÃªÂ®Ã†
         //for( int i = 0; i < bmpInfo.biHeight; i++ )
         //        newFile.write( ( char* )BMPSaveData[i], bmpInfo.biWidth*sizeof(RGBTRIPLE) );
         newFile.write( ( char* )BMPSaveData[0], bmpInfo.biWidth*sizeof(RGBTRIPLE)*bmpInfo.biHeight );
 
-        //¼g¤JÀÉ®×
+        //Å’gâ‚¬JÃ€Ã‰Â®Ã—
         newFile.close();
  
         return 1;
@@ -193,17 +193,17 @@ int saveBMP( char *fileName)
 
 
 /*********************************************************/
-/* ¤À°t°O¾ĞÅé¡G¦^¶Ç¬°Y*Xªº¯x°}                           */
+/* â‚¬Ã€Â°tÂ°OÅ¸ÃÃ…Ã©Â¡GÅ ^Â¶Ã‡Â¬Â°Y*XÂªÂºÂ¯xÂ°}                           */
 /*********************************************************/
 RGBTRIPLE **alloc_memory(int Y, int X )
 {        
-	//«Ø¥ßªø«×¬°Yªº«ü¼Ğ°}¦C
+	//Â«Ã˜Â¥ÃŸÂªÃ¸Â«Ã—Â¬Â°YÂªÂºÂ«Ã¼Å’ÃÂ°}Å C
         RGBTRIPLE **temp = new RGBTRIPLE *[ Y ];
 	RGBTRIPLE *temp2 = new RGBTRIPLE [ Y * X ];
         memset( temp, 0, sizeof( RGBTRIPLE ) * Y);
         memset( temp2, 0, sizeof( RGBTRIPLE ) * Y * X );
 
-	//¹ï¨C­Ó«ü¼Ğ°}¦C¸Ìªº«ü¼Ğ«Å§i¤@­Óªø«×¬°Xªº°}¦C 
+	//Â¹Ã¯Å¡CÂ­Ã“Â«Ã¼Å’ÃÂ°}Å CÅ¾ÃŒÂªÂºÂ«Ã¼Å’ÃÂ«Ã…Â§iâ‚¬@Â­Ã“ÂªÃ¸Â«Ã—Â¬Â°XÂªÂºÂ°}Å C 
         for( int i = 0; i < Y; i++){
                 temp[ i ] = &temp2[i*X];
         }
@@ -212,7 +212,7 @@ RGBTRIPLE **alloc_memory(int Y, int X )
  
 }
 /*********************************************************/
-/* ¥æ´«¤G­Ó«ü¼Ğ                                          */
+/* Â¥Ã¦Å½Â«â‚¬GÂ­Ã“Â«Ã¼Å’Ã                                          */
 /*********************************************************/
 void swap(RGBTRIPLE *a, RGBTRIPLE *b)
 {
