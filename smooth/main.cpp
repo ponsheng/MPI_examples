@@ -9,15 +9,15 @@
 
 using namespace std;
 
-//©wžq¥­·Æ¹BºâªºŠžŒÆ
-#define NSmooth 1000
+//定義平滑運算的次數
+#define NSmooth 10//1000
 
 /*********************************************************/
-/*ÅÜŒÆ«Å§i¡G                                             */
-/*  bmpHeader    ¡G BMPÀÉªºŒÐÀY                          */
-/*  bmpInfo      ¡G BMPÀÉªºžê°T                          */
-/*  **BMPSaveData¡G ÀxŠs­n³QŒg€Jªº¹³¯Àžê®Æ               */
-/*  **BMPData    ¡G ŒÈ®ÉÀxŠs­n³QŒg€Jªº¹³¯Àžê®Æ           */
+/*變數宣告：                                             */
+/*  bmpHeader    ： BMP檔的標頭                          */
+/*  bmpInfo      ： BMP檔的資訊                          */
+/*  **BMPSaveData： 儲存要被寫入的像素資料               */
+/*  **BMPData    ： 暫時儲存要被寫入的像素資料           */
 /*********************************************************/
 BMPHEADER bmpHeader;                        
 BMPINFO bmpInfo;
@@ -25,11 +25,11 @@ RGBTRIPLE **BMPSaveData = NULL;
 RGBTRIPLE **BMPData = NULL;                                                   
 
 /*********************************************************/
-/*šçŒÆ«Å§i¡G                                             */
-/*  readBMP    ¡G Åªšú¹ÏÀÉ¡AšÃ§â¹³¯Àžê®ÆÀxŠsŠbBMPSaveData*/
-/*  saveBMP    ¡G Œg€J¹ÏÀÉ¡AšÃ§â¹³¯Àžê®ÆBMPSaveDataŒg€J  */
-/*  swap       ¡G ¥æŽ«€G­Ó«üŒÐ                           */
-/*  **alloc_memory¡G °ÊºA€À°t€@­ÓY * X¯x°}               */
+/*函數宣告：                                             */
+/*  readBMP    ： 讀取圖檔，並把像素資料儲存在BMPSaveData*/
+/*  saveBMP    ： 寫入圖檔，並把像素資料BMPSaveData寫入  */
+/*  swap       ： 交換二個指標                           */
+/*  **alloc_memory： 動態分配一個Y * X矩陣               */
 /*********************************************************/
 int readBMP( char *fileName);        //read file
 int saveBMP( char *fileName);        //save file
@@ -39,152 +39,209 @@ RGBTRIPLE **alloc_memory( int Y, int X );        //allocate memory
 int main(int argc,char *argv[])
 {
 /*********************************************************/
-/*ÅÜŒÆ«Å§i¡G                                             */
-/*  *infileName  ¡G ÅªšúÀÉŠW                             */
-/*  *outfileName ¡G Œg€JÀÉŠW                             */
-/*  startwtime   ¡G °O¿ý¶}©l®É¶¡                         */
-/*  endwtime     ¡G °O¿ýµ²§ô®É¶¡                         */
+/*變數宣告：                                             */
+/*  *infileName  ： 讀取檔名                             */
+/*  *outfileName ： 寫入檔名                             */
+/*  startwtime   ： 記錄開始時間                         */
+/*  endwtime     ： 記錄結束時間                         */
 /*********************************************************/
 	char *infileName = "input.bmp";
-     	char *outfileName = "output2.bmp";
+    char *outfileName = "output2.bmp";
 	double startwtime = 0.0, endwtime=0;
+	int comm_size_tmp;
+    int my_id;
+	
+	RGBTRIPLE **LOCALData = NULL;
+	RGBTRIPLE **LOCALSaveData = NULL;
+	int height;
+	int width;
 
 	MPI_Init(&argc,&argv);
-	
-	//°O¿ý¶}©l®É¶¡
-	startwtime = MPI_Wtime();
+	MPI_Comm_size(MPI_COMM_WORLD, &comm_size_tmp);
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
+	const int comm_size = comm_size_tmp;
 
-	//ÅªšúÀÉ®×
+	//讀取檔案
+	if(my_id == 0)
+	{
         if ( readBMP( infileName) )
                 cout << "Read file successfully!!" << endl;
         else 
                 cout << "Read file fails!!" << endl;
 
-	//°ÊºA€À°t°OŸÐÅéµ¹ŒÈŠsªÅ¶¡
+	//動態分配記憶體給暫存空間
         BMPData = alloc_memory( bmpInfo.biHeight, bmpInfo.biWidth);
+		printf("bmp info : height:%d wigth:%d \n\n",bmpInfo.biHeight,bmpInfo.biWidth);
+		//記錄開始時間
+		startwtime = MPI_Wtime();
+		height = bmpInfo.biHeight/comm_size;
+		width = bmpInfo.biWidth;
+	}
+	//Broadcasts height width
+	MPI_Bcast(&height, 1, MPI_INT , 0, MPI_COMM_WORLD);
+	MPI_Bcast(&width, 1, MPI_INT , 0, MPI_COMM_WORLD);
+	printf("%d * %d\n",height,width);
+	
+	LOCALData = alloc_memory( height+2, width);
 
-        //¶iŠæŠhŠžªº¥­·Æ¹Bºâ
+	{
+		int displs[comm_size];
+		int scounts[comm_size];
+		for (int i=0; i<comm_size; ++i) { 
+        	displs[i] = i*height*width*3; 
+        	scounts[i] = height*width*3; 
+    	}
+		if(my_id ==0)
+		MPI_Scatterv( *BMPSaveData, scounts, displs, MPI_BYTE, LOCALData[0]
+			, height*width*3, MPI_BYTE, 0, MPI_COMM_WORLD);
+		else
+		MPI_Scatterv( NULL, scounts, displs, MPI_BYTE, LOCALData[1]
+            , height*width*3, MPI_BYTE, 0, MPI_COMM_WORLD);
+	}	
+/*
+        //進行多次的平滑運算
 	for(int count = 0; count < NSmooth ; count ++){
-		//§â¹³¯Àžê®Æ»PŒÈŠs«üŒÐ°µ¥æŽ«
+		//把像素資料與暫存指標做交換
 		swap(BMPSaveData,BMPData);
-		//¶iŠæ¥­·Æ¹Bºâ
+		//進行平滑運算
 		for(int i = 0; i<bmpInfo.biHeight ; i++)
 			for(int j =0; j<bmpInfo.biWidth ; j++){
+*/
 				/*********************************************************/
-				/*³]©w€W€U¥ª¥k¹³¯ÀªºŠìžm                                 */
+				/*設定上下左右像素的位置                                 */
 				/*********************************************************/
-				int Top = i>0 ? i-1 : bmpInfo.biHeight-1;
+/*				int Top = i>0 ? i-1 : bmpInfo.biHeight-1;
 				int Down = i<bmpInfo.biHeight-1 ? i+1 : 0;
 				int Left = j>0 ? j-1 : bmpInfo.biWidth-1;
 				int Right = j<bmpInfo.biWidth-1 ? j+1 : 0;
+*/				/*********************************************************/
+				/*與上下左右像素做平均，並四捨五入                       */
 				/*********************************************************/
-				/*»P€W€U¥ª¥k¹³¯À°µ¥­§¡¡AšÃ¥|±Ë€­€J                       */
-				/*********************************************************/
-				BMPSaveData[i][j].rgbBlue =  (double) (BMPData[i][j].rgbBlue+BMPData[Top][j].rgbBlue+BMPData[Down][j].rgbBlue+BMPData[i][Left].rgbBlue+BMPData[i][Right].rgbBlue)/5+0.5;
+/*				BMPSaveData[i][j].rgbBlue =  (double) (BMPData[i][j].rgbBlue+BMPData[Top][j].rgbBlue+BMPData[Down][j].rgbBlue+BMPData[i][Left].rgbBlue+BMPData[i][Right].rgbBlue)/5+0.5;
 				BMPSaveData[i][j].rgbGreen =  (double) (BMPData[i][j].rgbGreen+BMPData[Top][j].rgbGreen+BMPData[Down][j].rgbGreen+BMPData[i][Left].rgbGreen+BMPData[i][Right].rgbGreen)/5+0.5;
 				BMPSaveData[i][j].rgbRed =  (double) (BMPData[i][j].rgbRed+BMPData[Top][j].rgbRed+BMPData[Down][j].rgbRed+BMPData[i][Left].rgbRed+BMPData[i][Right].rgbRed)/5+0.5;
 			}
 	}
- 
- 	//Œg€JÀÉ®×
+*/
+    {
+        int displs[comm_size];
+        int scounts[comm_size];
+        for (int i=0; i<comm_size; ++i) { 
+            displs[i] = i*height*width*3; 
+            scounts[i] = height*width*3; 
+        }
+        if(my_id ==0)
+        MPI_Gatherv( LOCALData[0], height*width*3, MPI_BYTE
+			, *BMPSaveData, scounts, displs, MPI_BYTE, 0, MPI_COMM_WORLD);
+        else
+        MPI_Gatherv( LOCALData[0], height*width*3, MPI_BYTE
+            , NULL, scounts, displs, MPI_BYTE, 0, MPI_COMM_WORLD);
+    }
+
+
+	if(my_id == 0)
+	{
+	
+ 	//寫入檔案
         if ( saveBMP( outfileName ) )
                 cout << "Save file successfully!!" << endl;
         else
                 cout << "Save file fails!!" << endl;
 	
-	//±ošìµ²§ô®É¶¡¡AšÃŠL¥X°õŠæ®É¶¡
+	//得到結束時間，並印出執行時間
         endwtime = MPI_Wtime();
     	cout << "The execution time = "<< endwtime-startwtime <<endl ;
 
  	free(BMPData);
  	free(BMPSaveData);
+	}
  	MPI_Finalize();
 
-        return 0;
+    return 0;
 }
 
 /*********************************************************/
-/* Åªšú¹ÏÀÉ                                              */
+/* 讀取圖檔                                              */
 /*********************************************************/
 int readBMP(char *fileName)
 {
-	//«Ø¥ß¿é€JÀÉ®×ª«¥ó	
+	//建立輸入檔案物件	
         ifstream bmpFile( fileName, ios::in | ios::binary );
  
-        //ÀÉ®×µLªk¶}±Ò
+        //檔案無法開啟
         if ( !bmpFile ){
                 cout << "It can't open file!!" << endl;
                 return 0;
         }
  
-        //ÅªšúBMP¹ÏÀÉªºŒÐÀYžê®Æ
+        //讀取BMP圖檔的標頭資料
     	bmpFile.read( ( char* ) &bmpHeader, sizeof( BMPHEADER ) );
  
-        //§PšM¬O§_¬°BMP¹ÏÀÉ
+        //判決是否為BMP圖檔
         if( bmpHeader.bfType != 0x4d42 ){
                 cout << "This file is not .BMP!!" << endl ;
                 return 0;
         }
  
-        //ÅªšúBMPªºžê°T
+        //讀取BMP的資訊
         bmpFile.read( ( char* ) &bmpInfo, sizeof( BMPINFO ) );
         
-        //§PÂ_Šì€ž²`«×¬O§_¬°24 bits
+        //判斷位元深度是否為24 bits
         if ( bmpInfo.biBitCount != 24 ){
                 cout << "The file is not 24 bits!!" << endl;
                 return 0;
         }
 
-        //­×¥¿¹Ï€ùªºŒe«×¬°4ªº­¿ŒÆ
+        //修正圖片的寬度為4的倍數
         while( bmpInfo.biWidth % 4 != 0 )
         	bmpInfo.biWidth++;
 
-        //°ÊºA€À°t°OŸÐÅé
+        //動態分配記憶體
         BMPSaveData = alloc_memory( bmpInfo.biHeight, bmpInfo.biWidth);
         
-        //Åªšú¹³¯Àžê®Æ
+        //讀取像素資料
     	//for(int i = 0; i < bmpInfo.biHeight; i++)
         //	bmpFile.read( (char* )BMPSaveData[i], bmpInfo.biWidth*sizeof(RGBTRIPLE));
 	bmpFile.read( (char* )BMPSaveData[0], bmpInfo.biWidth*sizeof(RGBTRIPLE)*bmpInfo.biHeight);
 	
-        //Ãö³¬ÀÉ®×
+        //關閉檔案
         bmpFile.close();
  
         return 1;
  
 }
 /*********************************************************/
-/* ÀxŠs¹ÏÀÉ                                              */
+/* 儲存圖檔                                              */
 /*********************************************************/
 int saveBMP( char *fileName)
 {
- 	//§PšM¬O§_¬°BMP¹ÏÀÉ
+ 	//判決是否為BMP圖檔
         if( bmpHeader.bfType != 0x4d42 ){
                 cout << "This file is not .BMP!!" << endl ;
                 return 0;
         }
         
- 	//«Ø¥ß¿é¥XÀÉ®×ª«¥ó
+ 	//建立輸出檔案物件
         ofstream newFile( fileName,  ios:: out | ios::binary );
  
-        //ÀÉ®×µLªk«Ø¥ß
+        //檔案無法建立
         if ( !newFile ){
                 cout << "The File can't create!!" << endl;
                 return 0;
         }
  	
-        //Œg€JBMP¹ÏÀÉªºŒÐÀYžê®Æ
+        //寫入BMP圖檔的標頭資料
         newFile.write( ( char* )&bmpHeader, sizeof( BMPHEADER ) );
 
-	//Œg€JBMPªºžê°T
+	//寫入BMP的資訊
         newFile.write( ( char* )&bmpInfo, sizeof( BMPINFO ) );
 
-        //Œg€J¹³¯Àžê®Æ
+        //寫入像素資料
         //for( int i = 0; i < bmpInfo.biHeight; i++ )
         //        newFile.write( ( char* )BMPSaveData[i], bmpInfo.biWidth*sizeof(RGBTRIPLE) );
         newFile.write( ( char* )BMPSaveData[0], bmpInfo.biWidth*sizeof(RGBTRIPLE)*bmpInfo.biHeight );
 
-        //Œg€JÀÉ®×
+        //寫入檔案
         newFile.close();
  
         return 1;
@@ -193,17 +250,17 @@ int saveBMP( char *fileName)
 
 
 /*********************************************************/
-/* €À°t°OŸÐÅé¡GŠ^¶Ç¬°Y*Xªº¯x°}                           */
+/* 分配記憶體：回傳為Y*X的矩陣                           */
 /*********************************************************/
 RGBTRIPLE **alloc_memory(int Y, int X )
 {        
-	//«Ø¥ßªø«×¬°Yªº«üŒÐ°}ŠC
+	//建立長度為Y的指標陣列
         RGBTRIPLE **temp = new RGBTRIPLE *[ Y ];
 	RGBTRIPLE *temp2 = new RGBTRIPLE [ Y * X ];
         memset( temp, 0, sizeof( RGBTRIPLE ) * Y);
         memset( temp2, 0, sizeof( RGBTRIPLE ) * Y * X );
 
-	//¹ïšC­Ó«üŒÐ°}ŠCžÌªº«üŒÐ«Å§i€@­Óªø«×¬°Xªº°}ŠC 
+	//對每個指標陣列裡的指標宣告一個長度為X的陣列 
         for( int i = 0; i < Y; i++){
                 temp[ i ] = &temp2[i*X];
         }
@@ -212,7 +269,7 @@ RGBTRIPLE **alloc_memory(int Y, int X )
  
 }
 /*********************************************************/
-/* ¥æŽ«€G­Ó«üŒÐ                                          */
+/* 交換二個指標                                          */
 /*********************************************************/
 void swap(RGBTRIPLE *a, RGBTRIPLE *b)
 {
