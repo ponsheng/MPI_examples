@@ -10,7 +10,7 @@
 using namespace std;
 
 //定義平滑運算的次數
-#define NSmooth 10//1000
+#define NSmooth 1000
 
 /*********************************************************/
 /*變數宣告：                                             */
@@ -70,8 +70,7 @@ int main(int argc,char *argv[])
                 cout << "Read file fails!!" << endl;
 
 	//動態分配記憶體給暫存空間
-        BMPData = alloc_memory( bmpInfo.biHeight, bmpInfo.biWidth);
-		printf("bmp info : height:%d wigth:%d \n\n",bmpInfo.biHeight,bmpInfo.biWidth);
+		printf("bmp info : height:%d   wigth:%d \n\n",bmpInfo.biHeight,bmpInfo.biWidth);
 		//記錄開始時間
 		startwtime = MPI_Wtime();
 		height = bmpInfo.biHeight/comm_size;
@@ -83,6 +82,7 @@ int main(int argc,char *argv[])
 	printf("%d * %d\n",height,width);
 	
 	LOCALData = alloc_memory( height+2, width);
+	LOCALSaveData = alloc_memory( height+2, width);
 
 	{
 		int displs[comm_size];
@@ -92,37 +92,39 @@ int main(int argc,char *argv[])
         	scounts[i] = height*width*3; 
     	}
 		if(my_id ==0)
-		MPI_Scatterv( *BMPSaveData, scounts, displs, MPI_BYTE, LOCALData[0]
+		MPI_Scatterv( *BMPSaveData, scounts, displs, MPI_BYTE, LOCALData[1]
 			, height*width*3, MPI_BYTE, 0, MPI_COMM_WORLD);
 		else
 		MPI_Scatterv( NULL, scounts, displs, MPI_BYTE, LOCALData[1]
             , height*width*3, MPI_BYTE, 0, MPI_COMM_WORLD);
 	}	
-/*
-        //進行多次的平滑運算
+
+    //進行多次的平滑運算
+    int my_front = (my_id ==0)? comm_size-1 : my_id-1;
+	int my_back = (my_id == comm_size-1)? 0 : my_id+1;
 	for(int count = 0; count < NSmooth ; count ++){
 		//把像素資料與暫存指標做交換
-		swap(BMPSaveData,BMPData);
+
+		MPI_Send(LOCALData[1], width*3, MPI_BYTE, my_front, 0, MPI_COMM_WORLD);
+		MPI_Send(LOCALData[height], width*3, MPI_BYTE, my_back, 1, MPI_COMM_WORLD);	
+		MPI_Recv(LOCALData[0], width*3, MPI_BYTE, my_front, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Recv(LOCALData[height+1], width*3, MPI_BYTE, my_back, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		//進行平滑運算
-		for(int i = 0; i<bmpInfo.biHeight ; i++)
-			for(int j =0; j<bmpInfo.biWidth ; j++){
-*/
-				/*********************************************************/
-				/*設定上下左右像素的位置                                 */
-				/*********************************************************/
-/*				int Top = i>0 ? i-1 : bmpInfo.biHeight-1;
-				int Down = i<bmpInfo.biHeight-1 ? i+1 : 0;
-				int Left = j>0 ? j-1 : bmpInfo.biWidth-1;
-				int Right = j<bmpInfo.biWidth-1 ? j+1 : 0;
-*/				/*********************************************************/
-				/*與上下左右像素做平均，並四捨五入                       */
-				/*********************************************************/
-/*				BMPSaveData[i][j].rgbBlue =  (double) (BMPData[i][j].rgbBlue+BMPData[Top][j].rgbBlue+BMPData[Down][j].rgbBlue+BMPData[i][Left].rgbBlue+BMPData[i][Right].rgbBlue)/5+0.5;
-				BMPSaveData[i][j].rgbGreen =  (double) (BMPData[i][j].rgbGreen+BMPData[Top][j].rgbGreen+BMPData[Down][j].rgbGreen+BMPData[i][Left].rgbGreen+BMPData[i][Right].rgbGreen)/5+0.5;
-				BMPSaveData[i][j].rgbRed =  (double) (BMPData[i][j].rgbRed+BMPData[Top][j].rgbRed+BMPData[Down][j].rgbRed+BMPData[i][Left].rgbRed+BMPData[i][Right].rgbRed)/5+0.5;
+		for(int i = 1; i<height+1 ; i++)
+			for(int j =0; j<width ; j++){
+				//設定上下左右像素的位置                                 
+				int Top = i-1;//i>0 ? i-1 : height+1;
+				int Down = i+1; // i<height-1 ? i+1 : 0;
+				int Left = j>0 ? j-1 : width-1;
+				int Right = j<width-1 ? j+1 : 0;
+				//與上下左右像素做平均，並四捨五入       
+				LOCALSaveData[i][j].rgbBlue =  (double) (LOCALData[i][j].rgbBlue+LOCALData[Top][j].rgbBlue+LOCALData[Down][j].rgbBlue+LOCALData[i][Left].rgbBlue+LOCALData[i][Right].rgbBlue)/5+0.5;
+				LOCALSaveData[i][j].rgbGreen =  (double) (LOCALData[i][j].rgbGreen+LOCALData[Top][j].rgbGreen+LOCALData[Down][j].rgbGreen+LOCALData[i][Left].rgbGreen+LOCALData[i][Right].rgbGreen)/5+0.5;
+				LOCALSaveData[i][j].rgbRed =  (double) (LOCALData[i][j].rgbRed+LOCALData[Top][j].rgbRed+LOCALData[Down][j].rgbRed+LOCALData[i][Left].rgbRed+LOCALData[i][Right].rgbRed)/5+0.5;
 			}
+		swap(LOCALSaveData,LOCALData);
 	}
-*/
+	swap(LOCALSaveData,LOCALData);
     {
         int displs[comm_size];
         int scounts[comm_size];
@@ -131,10 +133,10 @@ int main(int argc,char *argv[])
             scounts[i] = height*width*3; 
         }
         if(my_id ==0)
-        MPI_Gatherv( LOCALData[0], height*width*3, MPI_BYTE
+        MPI_Gatherv( LOCALData[1], height*width*3, MPI_BYTE
 			, *BMPSaveData, scounts, displs, MPI_BYTE, 0, MPI_COMM_WORLD);
         else
-        MPI_Gatherv( LOCALData[0], height*width*3, MPI_BYTE
+        MPI_Gatherv( LOCALData[1], height*width*3, MPI_BYTE
             , NULL, scounts, displs, MPI_BYTE, 0, MPI_COMM_WORLD);
     }
 
@@ -152,9 +154,10 @@ int main(int argc,char *argv[])
         endwtime = MPI_Wtime();
     	cout << "The execution time = "<< endwtime-startwtime <<endl ;
 
- 	free(BMPData);
  	free(BMPSaveData);
 	}
+	free(LOCALData);
+	free(LOCALSaveData);
  	MPI_Finalize();
 
     return 0;
