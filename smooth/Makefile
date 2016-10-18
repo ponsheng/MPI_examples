@@ -1,18 +1,18 @@
 
-PROC=2
+PROC=8
 EXE= smooth
 
 $(EXE): main.cpp
-	mpiicc -g -Wall -o $(EXE) main.cpp
+	mpiicc -g -Wall -o $(EXE) $<
 
 run: $(EXE)
 	mpiexec -n $(PROC) ./$(EXE)
-	diff origin.bmp output2.bmp
+	diff output1.bmp output2.bmp
 
 boot:
 	mpdboot -n 4
 
-check: run
+check: 
 	diff origin.bmp output2.bmp
 
 trace:
