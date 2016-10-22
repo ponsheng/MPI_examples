@@ -3,13 +3,13 @@ PROC = 8
 EXE= odd-even
 
 $(EXE): main.c
-	mpiicc -g -Wall -o $(EXE) main.c
+	mpiicc -g  -std=c99 -Wall -o $(EXE) main.c
 
 run: $(EXE)
 	mpiexec -n $(PROC) ./$(EXE)
 
 boot:
-	mpdboot -n 4
+	mpdboot --file=../mpd.hosts -n 4
 
 trace:
 	mpdtrace
