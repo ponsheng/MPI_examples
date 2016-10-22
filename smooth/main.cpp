@@ -10,8 +10,9 @@
 using namespace std;
 
 //定義平滑運算的次數
+#ifndef NSmooth
 #define NSmooth 1000
-
+#endif
 /*********************************************************/
 /*變數宣告：                                             */
 /*  bmpHeader    ： BMP檔的標頭                          */
