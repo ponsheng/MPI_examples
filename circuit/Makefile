@@ -1,5 +1,5 @@
 
-PROC = 16
+PROC = 8
 EXE= circuit
 COMM = 2 #1  SERIAL 2 TREE
 
