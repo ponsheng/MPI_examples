@@ -9,7 +9,7 @@ run: $(EXE)
 	mpiexec -n $(PROC) ./$(EXE)
 
 boot:
-	mpdboot -n 4
+	mpdboot --file=../mpd.hosts -n 4
 
 trace:
 	mpdtrace

@@ -1,9 +1,14 @@
 
 PROC=8
 EXE= smooth
+NSmooth=1
 
 $(EXE): main.cpp
-	mpiicc -g -Wall -o $(EXE) $<
+	mpiicc -g -Wall -o $(EXE) $< -DNSmooth=$(NSmooth)
+
+origin: smooth.cpp
+	mpiicc -g -Wall -o $@ $< -DNSmooth=$(NSmooth)
+	mpiexec -n 1 ./origin
 
 run: $(EXE)
 	mpiexec -n $(PROC) ./$(EXE)
