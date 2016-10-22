@@ -1,5 +1,6 @@
 
-PROC = 8 
+PROC = 3
+
 EXE= odd-even
 
 $(EXE): main.c
