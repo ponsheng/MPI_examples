@@ -61,13 +61,13 @@ int main (int argc, char *argv[]) {
 		half = index/2;
 		if(my_id % index == 0)
 		{
-			MPI_Recv(&count, sizeof(int), MPI_INT, my_id + half, 0,
+			MPI_Recv(&count, 1, MPI_INT, my_id + half, 0,
                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			total_count += count;
 		}
 		else if((my_id % index) == half)
 		{
-			MPI_Send(&total_count,sizeof(int),MPI_INT, my_id - half, 0, MPI_COMM_WORLD);
+			MPI_Send(&total_count,1,MPI_INT, my_id - half, 0, MPI_COMM_WORLD);
 		}
 	}
 	if(my_id ==0 )
