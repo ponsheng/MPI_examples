@@ -18,12 +18,10 @@ using namespace std;
 /*  bmpHeader    ： BMP檔的標頭                          */
 /*  bmpInfo      ： BMP檔的資訊                          */
 /*  **BMPSaveData： 儲存要被寫入的像素資料               */
-/*  **BMPData    ： 暫時儲存要被寫入的像素資料           */
 /*********************************************************/
 BMPHEADER bmpHeader;                        
 BMPINFO bmpInfo;
 RGBTRIPLE **BMPSaveData = NULL;                                               
-RGBTRIPLE **BMPData = NULL;                                                   
 
 /*********************************************************/
 /*函數宣告：                                             */
@@ -70,9 +68,8 @@ int main(int argc,char *argv[])
         else 
                 cout << "Read file fails!!" << endl;
 
-	//動態分配記憶體給暫存空間
-		printf("bmp info : height:%d   wigth:%d \n\n",bmpInfo.biHeight,bmpInfo.biWidth);
 		//記錄開始時間
+		printf("Start process");
 		startwtime = MPI_Wtime();
 		height = bmpInfo.biHeight/comm_size;
 		width = bmpInfo.biWidth;
@@ -80,7 +77,6 @@ int main(int argc,char *argv[])
 	//Broadcasts height width
 	MPI_Bcast(&height, 1, MPI_INT , 0, MPI_COMM_WORLD);
 	MPI_Bcast(&width, 1, MPI_INT , 0, MPI_COMM_WORLD);
-	printf("%d * %d\n",height,width);
 	
 	LOCALData = alloc_memory( height+2, width);
 	LOCALSaveData = alloc_memory( height+2, width);
@@ -103,8 +99,8 @@ int main(int argc,char *argv[])
     //進行多次的平滑運算
     int my_front = (my_id ==0)? comm_size-1 : my_id-1;
 	int my_back = (my_id == comm_size-1)? 0 : my_id+1;
+
 	for(int count = 0; count < NSmooth ; count ++){
-		//把像素資料與暫存指標做交換
 
 		MPI_Send(LOCALData[1], width*3, MPI_BYTE, my_front, 0, MPI_COMM_WORLD);
 		MPI_Send(LOCALData[height], width*3, MPI_BYTE, my_back, 1, MPI_COMM_WORLD);	
@@ -125,7 +121,6 @@ int main(int argc,char *argv[])
 			}
 		swap(LOCALSaveData,LOCALData);
 	}
-	swap(LOCALSaveData,LOCALData);
     {
         int displs[comm_size];
         int scounts[comm_size];
