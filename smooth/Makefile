@@ -1,7 +1,7 @@
 
 PROC=8
 EXE= smooth
-NSmooth=1
+NSmooth=0
 
 $(EXE): main.cpp
 	mpiicc -g -Wall -o $(EXE) $< -DNSmooth=$(NSmooth)
@@ -24,4 +24,4 @@ trace:
 	mpdtrace
 
 clean:
-	rm $(EXE)
+	rm $(EXE) origin output1.bmp output2.bmp
