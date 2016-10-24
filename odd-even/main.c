@@ -11,7 +11,6 @@ void quick_sort(int arr[], int len);
 void printl(int arr[],int size);
 void merge_l(int *a,int *b,int *temp,int size);
 
-
 int main()
 {
 	int comm_size_tmp;
@@ -27,18 +26,19 @@ int main()
 	{
 		printf("input array size:\n");
 		scanf("%d",&arr_size);
-	//	printf("%d \n",arr_size);
 	}
 	MPI_Bcast(&arr_size, 1, MPI_INT , 0, MPI_COMM_WORLD);
-	//printf("%d get size: %d \n",my_id,arr_size);
+	arr_size = arr_size / comm_size;
 	int total_size = comm_size * arr_size;
 
 	int arr[arr_size];
+
 	srand(time(NULL) ^ getpid());
 	for(int i=0;i <arr_size;i++)
 	{
 		arr[i] = rand()%1000;
 	}
+
 	quick_sort(arr,(int) sizeof(arr)/sizeof(arr[0]));
 	printf("process %d get :",my_id);
 	printl(arr,arr_size);
@@ -48,6 +48,7 @@ int main()
 	int my_front = my_id -1;
 	int my_back = (my_id +1 >= comm_size) ?-1 : my_id+1;
 
+	//counting how many times to merge
 	int count = comm_size -1 + comm_size %2 ;
 	while(count-- >0)
 	{
@@ -86,9 +87,8 @@ int main()
         	}
 		}
 	}
-	//printf("process %d for now :",my_id);
-    //printl(arr,arr_size);
-    //
+
+	//build gatherv maps
 	int displs[comm_size];
 	int scounts[comm_size];
 	for (int i=0; i<comm_size; ++i) {
@@ -101,6 +101,7 @@ int main()
 		int total_arr[total_size];
 		MPI_Gatherv( arr, arr_size, MPI_INT
             , total_arr, scounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
+		printf("global sorted list:\n");
 		printl(total_arr,arr_size*comm_size);
 	}    
 	else
@@ -112,6 +113,7 @@ int main()
 	return 0;
 }
 
+//merge two array into temp array in order
 void merge_l(int *a,int *b,int *temp,int size)
 {
     int a_count = size;
@@ -135,7 +137,7 @@ void merge_l(int *a,int *b,int *temp,int size)
         *(temp++) = *(b++);
 }
 
-
+//print a array of size
 void printl(int arr[],int size)
 {
 	int i=0;
@@ -146,6 +148,7 @@ void printl(int arr[],int size)
 	printf("\n");
 }
 
+//swap two ptr's data
 void swap(int *x, int *y) 
 {
 	int t = *x;
@@ -153,6 +156,7 @@ void swap(int *x, int *y)
 	*y = t;
 }
 
+//do quicksort
 void quick_sort_recursive(int arr[], int start, int end)
 {
 	if (start >= end)
