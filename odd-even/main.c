@@ -4,12 +4,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <string.h>
-
 #include <mpi.h>
 
 void quick_sort(int arr[], int len);
 void printl(int arr[],int size);
-void merge_l(int *a,int *b,int *temp,int size);
+void merge_l(int *a,int *b,int *temp,int size1,int size2);
 
 int main()
 {
@@ -28,8 +27,23 @@ int main()
 		scanf("%d",&arr_size);
 	}
 	MPI_Bcast(&arr_size, 1, MPI_INT , 0, MPI_COMM_WORLD);
-	arr_size = arr_size / comm_size;
-	int total_size = comm_size * arr_size;
+
+	//build gatherv maps
+    int displs[comm_size];
+    int scounts[comm_size];
+	int remainder = arr_size % comm_size;
+    for (int i=0; i<comm_size; ++i) {
+		scounts[i] = arr_size/comm_size + (remainder-- > 0);
+		displs[i] =  (i==0) ? 0 : (displs[i-1]+scounts[i-1]);
+    }
+	if(my_id == 0)
+	{
+		for (int i=0; i<comm_size; ++i) {
+        	printf("i:%d count:%d displ:%d\n",i,scounts[i] ,displs[i]);
+    	}
+	}
+	int total_size = arr_size;
+	arr_size = scounts[my_id];
 
 	int arr[arr_size];
 
@@ -43,8 +57,8 @@ int main()
 	printf("process %d get :",my_id);
 	printl(arr,arr_size);
 
-	int arr2[arr_size];
-	int temp[2*arr_size];
+	int arr2[arr_size+1];
+	int temp[2*arr_size+2];
 	int my_front = my_id -1;
 	int my_back = (my_id +1 >= comm_size) ?-1 : my_id+1;
 
@@ -54,16 +68,16 @@ int main()
 	{
 		if( (!(my_id %2))&& my_back >=0)
 		{
-			MPI_Recv(arr2, arr_size, MPI_INT, my_back, 0,
+			MPI_Recv(arr2, scounts[my_back], MPI_INT, my_back, 1,
             	    MPI_COMM_WORLD, MPI_STATUS_IGNORE);	
-			merge_l(arr,arr2,temp,arr_size);
+			merge_l(arr,arr2,temp,arr_size,scounts[my_back]);
 			memcpy(arr,temp,4*arr_size);
-			MPI_Send(&(temp[arr_size]),arr_size,MPI_INT, 
+			MPI_Send(&(temp[arr_size]),scounts[my_back],MPI_INT, 
 					my_back, 0, MPI_COMM_WORLD);
 		}
 		else if((my_id %2) && my_front >=0)
 		{
-			MPI_Send(arr,arr_size,MPI_INT, my_front, 0, MPI_COMM_WORLD);
+			MPI_Send(arr,arr_size,MPI_INT, my_front, 1, MPI_COMM_WORLD);
 			MPI_Recv(arr, arr_size, MPI_INT, my_front, 0,
                 	MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		}
@@ -73,28 +87,21 @@ int main()
 			//printf("%d inside  count:%d id2:%d \n",my_id,count,my_id%2);
 			if( (my_id %2)&& my_back >=0)
         	{
-            	MPI_Recv(arr2, arr_size, MPI_INT, my_back, 0,
+            	MPI_Recv(arr2, scounts[my_back], MPI_INT, my_back, 1,
                     	MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
-            	merge_l(arr,arr2,temp,arr_size);
+            	merge_l(arr,arr2,temp,arr_size,scounts[my_back]);
 				memcpy(arr,temp,4*arr_size);
-            	MPI_Send(&(temp[arr_size]),arr_size,MPI_INT, my_back, 0, MPI_COMM_WORLD);
+            	MPI_Send(&(temp[arr_size]),scounts[my_back],MPI_INT, my_back, 0, MPI_COMM_WORLD);
         	}
         	else if((!(my_id%2)) && my_front >=0)
         	{
-            	MPI_Send(arr,arr_size,MPI_INT, my_front, 0, MPI_COMM_WORLD);
+            	MPI_Send(arr,arr_size,MPI_INT, my_front, 1, MPI_COMM_WORLD);
             	MPI_Recv(arr, arr_size, MPI_INT, my_front, 0,
             	        MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         	}
 		}
 	}
 
-	//build gatherv maps
-	int displs[comm_size];
-	int scounts[comm_size];
-	for (int i=0; i<comm_size; ++i) {
-		displs[i] = i*arr_size;
-		scounts[i] = arr_size;
-	}	
 	
 	if(my_id ==0)
 	{
@@ -102,7 +109,7 @@ int main()
 		MPI_Gatherv( arr, arr_size, MPI_INT
             , total_arr, scounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
 		printf("global sorted list:\n");
-		printl(total_arr,arr_size*comm_size);
+		printl(total_arr,total_size);
 	}    
 	else
 	{
@@ -114,10 +121,10 @@ int main()
 }
 
 //merge two array into temp array in order
-void merge_l(int *a,int *b,int *temp,int size)
+void merge_l(int *a,int *b,int *temp,int size1,int size2)
 {
-    int a_count = size;
-    int b_count = size;
+    int a_count = size1;
+    int b_count = size2;
     while(a_count && b_count)
     {
         if(*a < *b)

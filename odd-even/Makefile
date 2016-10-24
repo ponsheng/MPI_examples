@@ -1,5 +1,5 @@
 
-PROC = 4
+PROC = 16
 
 EXE= odd-even
 
