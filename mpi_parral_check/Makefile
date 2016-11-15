@@ -1,6 +1,6 @@
 
 PROC = 8 
-EXE= 
+EXE= mpi_test 
 
 $(EXE): main.c
 	mpiicc -g -Wall -o $(EXE) main.c
