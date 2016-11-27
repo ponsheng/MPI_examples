@@ -6,12 +6,14 @@ EXEC_ORIG = smooth_orig
 OUTPUT = output.bmp
 OUTPUT_ORIG = output_origin.bmp
 
-CFLAGS := -DNSmooth=10
+NSmooth = 50
+NProc = 8
+CFLAGS := -DNSmooth=$(NSmooth) -DNProc=$(NProc)
 
 all:$(EXEC_ORIG) $(EXEC)
 
 $(EXEC): main.cpp
-	$(CC) $(CFLAGS) $^ -o $@ -lpthread
+	$(CC) $(CFLAGS) $^ -o $@ -lpthread -g 
 
 $(EXEC_ORIG): $(EXEC_ORIG).cpp
 	$(CC) $^ -o $@ $(CFLAGS)

@@ -1,12 +1,15 @@
 #include <iostream>
 #include <string>
+#include <string.h>
 #include <fstream>
 #include <stdio.h>
 #include <cstring>
 #include <cstdlib>
+#include <assert.h>
 #include "bmp.h"
 #include <sys/time.h>
 #include <sys/timeb.h>
+#include <semaphore.h>
 
 using namespace std;
 
@@ -31,6 +34,11 @@ BMPINFO bmpInfo;
 RGBTRIPLE **BMPSaveData = NULL;
 RGBTRIPLE **BMPData = NULL;
 
+int counter=0;
+//sem_t count_sem = 1;
+pthread_mutex_t barrier_mutex;
+sem_t barrier_sem;
+
 /*********************************************************/
 /*函數宣告：                                             */
 /*  readBMP    ： 讀取圖檔，並把像素資料儲存在BMPSaveData*/
@@ -43,6 +51,7 @@ int saveBMP( char *fileName);        //save file
 void swap(RGBTRIPLE *a, RGBTRIPLE *b);
 RGBTRIPLE **alloc_memory( int Y, int X );        //allocate memory
 
+
 long long getSystemTime()
 {
 	struct timeb t;
@@ -50,28 +59,62 @@ long long getSystemTime()
 	return 1000 * t.time + t.millitm;
 }
 
+void barrier(int n)
+{
+	pthread_mutex_lock(&barrier_mutex);
+        if(counter == NProc -1)
+        {
+            counter = 0;
+			//printf("release N=%d\n",n);
+            for (int sem = 0; sem < NProc -1 ;sem++)
+                sem_post(&barrier_sem); 
+            pthread_mutex_unlock(&barrier_mutex);
+        }
+        else
+        {
+            ++counter;
+			//printf("wait ");
+            pthread_mutex_unlock(&barrier_mutex);
+            sem_wait(&barrier_sem);
+        }
+}
+
 void *smooth_parallel(void* arg)
 {
-	BMPData = alloc_memory( bmpInfo.biHeight, bmpInfo.biWidth);	
-	
+	//BMPData = alloc_memory( bmpInfo.biHeight, bmpInfo.biWidth);	
+	RGBTRIPLE **local_data;
+	long id =(long) arg;
+	int start_row = id * (bmpInfo.biHeight/NProc);
+	int end_row = (id != NProc -1)? (id +1) * (bmpInfo.biHeight/NProc) -1 : bmpInfo.biHeight -1;
+	printf("Thread: %d start: %d end: %d\n",id,start_row,end_row);
+
+	local_data = alloc_memory( end_row - start_row +1 , bmpInfo.biWidth);
+
 	for(int count = 0; count < NSmooth ; count ++)
 	{
-		//把像素資料與暫存指標做交換
-		swap(BMPSaveData,BMPData);
 		//進行平滑運算
-		for(int i = 0; i<bmpInfo.biHeight ; i++)
+		for(int i = start_row; i<= end_row; i++)
 		{
 			for(int j =0; j<bmpInfo.biWidth ; j++) {
 				int Top = i>0 ? i-1 : bmpInfo.biHeight-1;
 				int Down = i<bmpInfo.biHeight-1 ? i+1 : 0;
 				int Left = j>0 ? j-1 : bmpInfo.biWidth-1;
 				int Right = j<bmpInfo.biWidth-1 ? j+1 : 0;
+				int relative_i = i - start_row;
 
-				BMPSaveData[i][j].rgbBlue =  (double) (BMPData[i][j].rgbBlue+BMPData[Top][j].rgbBlue+BMPData[Down][j].rgbBlue+BMPData[i][Left].rgbBlue+BMPData[i][Right].rgbBlue)/5+0.5;
-				BMPSaveData[i][j].rgbGreen =  (double) (BMPData[i][j].rgbGreen+BMPData[Top][j].rgbGreen+BMPData[Down][j].rgbGreen+BMPData[i][Left].rgbGreen+BMPData[i][Right].rgbGreen)/5+0.5;
-				BMPSaveData[i][j].rgbRed =  (double) (BMPData[i][j].rgbRed+BMPData[Top][j].rgbRed+BMPData[Down][j].rgbRed+BMPData[i][Left].rgbRed+BMPData[i][Right].rgbRed)/5+0.5;
+				local_data[relative_i][j].rgbBlue =  (double) (BMPSaveData[i][j].rgbBlue+BMPSaveData[Top][j].rgbBlue+BMPSaveData[Down][j].rgbBlue+BMPSaveData[i][Left].rgbBlue+BMPSaveData[i][Right].rgbBlue)/5+0.5;
+				local_data[relative_i][j].rgbGreen =  (double) (BMPSaveData[i][j].rgbGreen+BMPSaveData[Top][j].rgbGreen+BMPSaveData[Down][j].rgbGreen+BMPSaveData[i][Left].rgbGreen+BMPSaveData[i][Right].rgbGreen)/5+0.5;
+				local_data[relative_i][j].rgbRed =  (double) (BMPSaveData[i][j].rgbRed+BMPSaveData[Top][j].rgbRed+BMPSaveData[Down][j].rgbRed+BMPSaveData[i][Left].rgbRed+BMPSaveData[i][Right].rgbRed)/5+0.5;
 			}
 		}
+		//wait every thread computing
+		barrier(count);
+		fflush(stdout);
+		//put data back 
+		memcpy ( BMPSaveData[start_row], local_data[0], (end_row - start_row +1)*bmpInfo.biWidth * sizeof(RGBTRIPLE) );
+		//wait every thread updating data
+		barrier(count);
+		fflush(stdout);
 	}
 	free(BMPData);
 }
@@ -90,6 +133,9 @@ int main(int argc,char *argv[])
 	long long startwtime = 0, endwtime=0;
 	pthread_t* thread_id;
 
+
+	int ret = sem_init(&barrier_sem, 0,0);
+	assert(! ret);
 	thread_id = (pthread_t*)malloc( NProc * sizeof(pthread_t));
 
 	//記錄開始時間
@@ -102,10 +148,10 @@ int main(int argc,char *argv[])
 		cout << "Read file fails!!" << endl;
 
 
-
 	for(int thread = 0; thread < NProc; thread++)
+	{
         pthread_create( &thread_id[thread], NULL, smooth_parallel, (void*) thread);
-
+	}
 
     for(int thread = 0; thread < NProc; thread++)
         pthread_join( thread_id[thread], NULL);
