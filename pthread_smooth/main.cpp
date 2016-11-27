@@ -34,10 +34,14 @@ BMPINFO bmpInfo;
 RGBTRIPLE **BMPSaveData = NULL;
 RGBTRIPLE **BMPData = NULL;
 
-int counter=0;
+int counter_c=0;
+int counter_u=0;
 //sem_t count_sem = 1;
-pthread_mutex_t barrier_mutex;
-sem_t barrier_sem;
+pthread_mutex_t barrier_mutex_u;
+sem_t barrier_sem_u;
+
+pthread_mutex_t barrier_mutex_c;
+sem_t barrier_sem_c;
 
 /*********************************************************/
 /*函數宣告：                                             */
@@ -59,29 +63,50 @@ long long getSystemTime()
 	return 1000 * t.time + t.millitm;
 }
 
-void barrier(int n)
+void barrier_compute(int n)
 {
-	pthread_mutex_lock(&barrier_mutex);
-        if(counter == NProc -1)
-        {
-            counter = 0;
-			//printf("release N=%d\n",n);
-            for (int sem = 0; sem < NProc -1 ;sem++)
-                sem_post(&barrier_sem); 
-            pthread_mutex_unlock(&barrier_mutex);
-        }
-        else
-        {
-            ++counter;
-			//printf("wait ");
-            pthread_mutex_unlock(&barrier_mutex);
-            sem_wait(&barrier_sem);
-        }
+	pthread_mutex_lock(&barrier_mutex_c);
+	if(counter_c == NProc -1)
+	{
+		counter_c = 0;
+		//printf("release N=%d\n",n);
+		for (int sem = 0; sem < NProc -1 ; sem++)
+			sem_post(&barrier_sem_c);
+		pthread_mutex_unlock(&barrier_mutex_c);
+	}
+	else
+	{
+		++counter_c;
+		//printf("wait ");
+		pthread_mutex_unlock(&barrier_mutex_c);
+		sem_wait(&barrier_sem_c);
+	}
 }
+
+void barrier_update(int n)
+{
+    pthread_mutex_lock(&barrier_mutex_u);
+    if(counter_u == NProc -1)
+    {
+        counter_u = 0;
+        //printf("release N=%d\n",n);
+        for (int sem = 0; sem < NProc -1 ; sem++)
+            sem_post(&barrier_sem_u);
+        pthread_mutex_unlock(&barrier_mutex_u);
+    }
+    else
+    {
+        ++counter_u;
+        //printf("wait ");
+        pthread_mutex_unlock(&barrier_mutex_u);
+        sem_wait(&barrier_sem_u);
+    }
+}
+
 
 void *smooth_parallel(void* arg)
 {
-	//BMPData = alloc_memory( bmpInfo.biHeight, bmpInfo.biWidth);	
+	//BMPData = alloc_memory( bmpInfo.biHeight, bmpInfo.biWidth);
 	RGBTRIPLE **local_data;
 	long id =(long) arg;
 	int start_row = id * (bmpInfo.biHeight/NProc);
@@ -108,15 +133,15 @@ void *smooth_parallel(void* arg)
 			}
 		}
 		//wait every thread computing
-		barrier(count);
-		fflush(stdout);
-		//put data back 
+		barrier_compute(count);
+		//fflush(stdout);
+		//put data back
 		memcpy ( BMPSaveData[start_row], local_data[0], (end_row - start_row +1)*bmpInfo.biWidth * sizeof(RGBTRIPLE) );
 		//wait every thread updating data
-		barrier(count);
-		fflush(stdout);
+		barrier_update(count);
+		//fflush(stdout);
 	}
-	free(BMPData);
+	free(local_data);
 }
 
 int main(int argc,char *argv[])
@@ -134,8 +159,12 @@ int main(int argc,char *argv[])
 	pthread_t* thread_id;
 
 
-	int ret = sem_init(&barrier_sem, 0,0);
+	int ret = sem_init(&barrier_sem_u, 0,0);
 	assert(! ret);
+
+	ret = sem_init(&barrier_sem_c, 0,0);
+    assert(! ret);
+
 	thread_id = (pthread_t*)malloc( NProc * sizeof(pthread_t));
 
 	//記錄開始時間
@@ -150,11 +179,11 @@ int main(int argc,char *argv[])
 
 	for(int thread = 0; thread < NProc; thread++)
 	{
-        pthread_create( &thread_id[thread], NULL, smooth_parallel, (void*) thread);
+		pthread_create( &thread_id[thread], NULL, smooth_parallel, (void*) thread);
 	}
 
-    for(int thread = 0; thread < NProc; thread++)
-        pthread_join( thread_id[thread], NULL);
+	for(int thread = 0; thread < NProc; thread++)
+		pthread_join( thread_id[thread], NULL);
 
 
 	//寫入檔案

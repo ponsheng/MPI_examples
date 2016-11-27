@@ -6,8 +6,8 @@ EXEC_ORIG = smooth_orig
 OUTPUT = output.bmp
 OUTPUT_ORIG = output_origin.bmp
 
-NSmooth = 50
-NProc = 8
+NSmooth = 1000
+NProc = 16
 CFLAGS := -DNSmooth=$(NSmooth) -DNProc=$(NProc)
 
 all:$(EXEC_ORIG) $(EXEC)
