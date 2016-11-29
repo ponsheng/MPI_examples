@@ -1,4 +1,5 @@
 CC = c++
+SHELL = /bin/bash
 
 EXEC = smooth
 EXEC_ORIG = smooth_orig

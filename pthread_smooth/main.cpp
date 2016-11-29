@@ -111,7 +111,7 @@ void *smooth_parallel(void* arg)
 	long id =(long) arg;
 	int start_row = id * (bmpInfo.biHeight/NProc);
 	int end_row = (id != NProc -1)? (id +1) * (bmpInfo.biHeight/NProc) -1 : bmpInfo.biHeight -1;
-	printf("Thread: %d start: %d end: %d\n",id,start_row,end_row);
+	printf("Thread: %ld start: %d end: %d\n",id,start_row,end_row);
 
 	local_data = alloc_memory( end_row - start_row +1 , bmpInfo.biWidth);
 
@@ -177,7 +177,7 @@ int main(int argc,char *argv[])
 		cout << "Read file fails!!" << endl;
 
 
-	for(int thread = 0; thread < NProc; thread++)
+	for(long thread = 0; thread < NProc; thread++)
 	{
 		pthread_create( &thread_id[thread], NULL, smooth_parallel, (void*) thread);
 	}
