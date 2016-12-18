@@ -1,0 +1,15 @@
+EXE = count_sort
+EXE_ORIG = count_sort_orig
+EXE_QSORT = qsort
+
+$(EXE): main.c count_sort.c
+	gcc -Wall -fopenmp $^ -o $@
+
+$(EXE_ORIG): main.c origin.c
+	gcc $^ -o $@
+
+$(EXE_QSORT): main.c qsort.c
+	gcc $^ -o $@
+
+clean:
+	rm -f $(EXE) $(EXE_ORIG) $(EXE_QSORT)
