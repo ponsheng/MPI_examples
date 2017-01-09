@@ -1,10 +1,11 @@
-
 EXE = ant
+
+CFLAGS = -Wall -g -std=gnu99 -fopenmp
 
 all: $(EXE)
 
 $(EXE):	main.c
-	gcc $^ -o $@ -g -Wall
+	gcc $^ -o $@  $(CFLAGS)
 
 run: $(EXE)
 	./$<

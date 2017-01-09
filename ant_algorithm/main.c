@@ -9,13 +9,14 @@
 #define INPUT_FILE   "cities/fri26_d.txt"
 #define N 26
 #define ANT_NUM 10
-#define EVAP_RATE 0.1
+#define EVAP_RATE 0.9
+#define Q 1000
+#define TOUR_MAX 1000
+#define NUM_THREAD 2
 
 int** map;
 float phero[N][N] = {0};
 
-int best_tour[N];
-int best_tour_distance=0;
 
 typedef struct ant{
 	int tour[N];	
@@ -68,7 +69,7 @@ double rand_d() //random decimal fraction,ie 0~1
 void print_array(int* array)
 {
 	for(int i=0;i<N;i++)
-		printf("%d ",array[i]);
+		printf("%2d ",array[i]);
 	printf("\n");	
 }
 
@@ -77,7 +78,7 @@ void print_phero(float a[][N])
 	for(int i=0; i<N; i++)
 	{
 		for(int j=0;j<N;j++)
-			printf("%.2f ",a[i][j]);
+			printf("%.2f",a[i][j]);
 		printf("\n");
 	}
 }
@@ -112,22 +113,24 @@ int main()
 {
 	
 	read_input(INPUT_FILE);
-	int tour_count = 10000;
+	srand(time(NULL));
+
+
+	#pragma omp parallel num_threads(NUM_THREAD)
+	{
+	int tour_count = 0;
 	double pro = 0; //probability
 	double pro_accum = 0;
 	double sum;
 	int next;
-	int record[N][N] ;
+	int record[N][N];
 
-	srand(time(NULL));
+	int best_tour[N];
+	int best_tour_distance=0;
 
 	ant_t ants[ANT_NUM];
-	//memset(ants,0,ANT_NUM*sizeof(ant_t));
-		
 
-
-
-	while(tour_count > 0)
+	while(tour_count < TOUR_MAX)
 	{
 		ants_init(ants,ANT_NUM);
 		memset(record,0,N*N*sizeof(int));
@@ -161,7 +164,7 @@ int main()
 				}
 				if(next >= N)
 				{
-					printf("error: pro:%f accum%f sum:%f",pro,pro_accum,sum);
+					printf("error: pro:%f accum:%f sum:%f next:%d\n",pro,pro_accum,sum,next);
 					exit(0);
 				}
 				//printf("next: %d accum: %f\n",next,pro_accum);
@@ -192,7 +195,9 @@ int main()
 			print_array(ants[i].tour);
 			//print_array(ants[i].visited);
 		}*/
-		int Q = 1000;
+
+		#pragma omp critical
+		{
 		int phero_count;
 		for(int i=0; i<N ;i++)
 		{
@@ -201,17 +206,20 @@ int main()
 			{
 				phero_count = record[i][j] + record[j][i];
 				//printf("count %d\n",phero_count);
-				phero[i][j] = phero[j][i] = phero[j][i]*EVAP_RATE + Q*(float)phero_count/(map[i][j]+1);
+				phero[i][j] = phero[j][i] = phero[j][i]*(1-EVAP_RATE) + Q*(float)phero_count/(map[i][j]+1);
 				//printf("%d ",phero[j][i]*EVAP_RATE + Q*phero_count/(map[i][j]+1))
 			}
 		}
+		}
+
+		#pragma omp barrier	
 		
 		//for(int i=0; i<N ;i++)
 		//	print_array(record[i]);
 		//print_phero(phero);
 
 		
-		tour_count-- ;
+		tour_count++ ;
 		//printf("%d \n",tour_count);
 	}
 	
@@ -225,7 +233,9 @@ int main()
 		print_array(best_tour);
 
 	printf("end while\n");
-end:
+
+
+	}
 	if(map)
 		free(map);
 
