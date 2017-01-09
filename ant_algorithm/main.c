@@ -3,11 +3,13 @@
 #include <stdio.h>
 #include <time.h>
 #include <omp.h>
+#include <mpi.h>
 
-
-//#define INPUT_FILE "cities/gr17_d.txt"
-#define INPUT_FILE   "cities/fri26_d.txt"
+#ifndef INPUT_FILE
+#define INPUT_FILE "cities/fri26_d.txt"
 #define N 26
+#endif
+
 #define ANT_NUM 10
 #define EVAP_RATE 0.9
 #define Q 1000
@@ -15,8 +17,15 @@
 #define NUM_THREAD 2
 
 int** map;
-float phero[N][N] = {0};
+float global_phero[N][N] = {0};
+int global_tour[N] ;
+int global_tour_distance = 0;
 
+int best_tour_distance;
+int* gather_array;
+int best_node;
+int same_path_count=0;
+int loop_end = 0;
 
 typedef struct ant{
 	int tour[N];	
@@ -89,7 +98,7 @@ void ants_init(ant_t* ants,int n)
 	memset(ants,0,ANT_NUM*sizeof(ant_t));	
 	for(int i=0; i<ANT_NUM; i++)
 	{
-		first_city = 0;//rand()%N;
+		first_city = rand()%N;
 		ants[i].tour[0] = first_city;
 		ants[i].visited[first_city] = 1;
 		//printf("first city: %d\n",first_city);
@@ -109,15 +118,25 @@ int cal_tour_distance(int* tour)
 	return distance;
 }
 
-int main()
+int main(int argc,char *argv[])
 {
 	
 	read_input(INPUT_FILE);
 	srand(time(NULL));
+	
+	int comm_size_tmp;
+	int my_id;
 
+	MPI_Init(&argc,&argv);
+	MPI_Comm_size(MPI_COMM_WORLD, &comm_size_tmp);
+	MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
+	const int comm_size = comm_size_tmp;
+
+	gather_array = (int*) malloc(sizeof(int) * comm_size);
 
 	#pragma omp parallel num_threads(NUM_THREAD)
 	{
+	float phero[N][N] = {0};
 	int tour_count = 0;
 	double pro = 0; //probability
 	double pro_accum = 0;
@@ -125,12 +144,12 @@ int main()
 	int next;
 	int record[N][N];
 
-	int best_tour[N];
-	int best_tour_distance=0;
+	int local_tour[N];
+	int local_tour_distance=0;
 
 	ant_t ants[ANT_NUM];
 
-	while(tour_count < TOUR_MAX)
+	while(tour_count < TOUR_MAX && loop_end == 0)
 	{
 		ants_init(ants,ANT_NUM);
 		memset(record,0,N*N*sizeof(int));
@@ -158,7 +177,11 @@ int main()
 				{
 					next++;
 					while(ant_p->visited[next]!=0)
+					{
 						next++;
+						if(next >= N)
+							printf("next exceed%d %d\n",next,ant_p->visited[next]);
+					}
 			
 					pro_accum += (phero[ant_p->tour[i]][next]+1)/map[ant_p->tour[i]][next]/sum;
 				}
@@ -180,24 +203,18 @@ int main()
 		for(int i=0; i<ANT_NUM; i++)
 		{
 			int local_distance = cal_tour_distance(ants[i].tour);
-			if(best_tour_distance == local_distance)
-				printf("Same Path\n");
-			if(best_tour_distance > local_distance || best_tour_distance == 0)
+			if(local_tour_distance == local_distance);
+				//printf("Same Path\n");
+			if(local_tour_distance > local_distance || local_tour_distance == 0)
 			{
-				printf("Replace\n");
-				memcpy(best_tour,ants[i].tour,N*sizeof(int));
-				best_tour_distance = local_distance;	
+				//printf("Replace\n");
+				memcpy(local_tour,ants[i].tour,N*sizeof(int));
+				local_tour_distance = local_distance;	
 			}
 
 		}
-		/*for(int i=0; i<ANT_NUM;i++)
-		{
-			print_array(ants[i].tour);
-			//print_array(ants[i].visited);
-		}*/
 
-		#pragma omp critical
-		{
+		
 		int phero_count;
 		for(int i=0; i<N ;i++)
 		{
@@ -210,34 +227,86 @@ int main()
 				//printf("%d ",phero[j][i]*EVAP_RATE + Q*phero_count/(map[i][j]+1))
 			}
 		}
+		
+		#pragma omp critical
+		{
+			//if(local_tour_distance == global_tour_distance)
+				//printf("Same Path\n");
+			if(local_tour_distance < global_tour_distance || global_tour_distance == 0)
+			{
+				//printf("Replace\n");
+				memcpy(global_tour,local_tour,N*sizeof(int));
+				global_tour_distance = local_tour_distance;
+			}
+
 		}
 
-		#pragma omp barrier	
-		
-		//for(int i=0; i<N ;i++)
-		//	print_array(record[i]);
-		//print_phero(phero);
 
-		
+		#pragma omp single
+		{
+		//mpi data exchange
+		MPI_Allreduce(&global_tour_distance, &best_tour_distance, 1,MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+		//printf("best_distance: %d\n",best_tour_distance);
+
+		if(my_id == 0)
+		{
+			if(global_tour_distance == best_tour_distance)
+			{
+				same_path_count++;
+				if(same_path_count > 50)
+				{
+					loop_end = 1;
+					printf("Reach terminate condition");
+				}
+			}	
+			else
+				same_path_count = 0;
+		}
+
+		MPI_Allgather(&global_tour_distance, 1, MPI_INT,gather_array,1,MPI_INT,MPI_COMM_WORLD);
+
+		for(best_node=0; best_node<comm_size; best_node++)
+		{
+			if(gather_array[best_node] == best_tour_distance)
+				break;
+			
+		}
+		if(best_node == comm_size)
+			printf("MPI_ERROR\nplease rerun program");
+		//printf("Best node: %d\n",best_node);
+		MPI_Bcast(&global_tour_distance,1,MPI_INT,best_node,MPI_COMM_WORLD);
+		MPI_Bcast(global_tour,N,MPI_INT,best_node,MPI_COMM_WORLD);	
+		MPI_Bcast(&loop_end,1,MPI_INT,0,MPI_COMM_WORLD);
+		}
+		#pragma omp barrier
+
 		tour_count++ ;
-		//printf("%d \n",tour_count);
 	}
-	
+
+		/*#pragma omp critical	
+		{
         for(int i=0; i<ANT_NUM;i++)
         {
             print_array(ants[i].tour);
             //print_array(ants[i].visited);
         }
 
-		printf("Best Tour:\nLen = %d\n",best_tour_distance);
-		print_array(best_tour);
-
-	printf("end while\n");
-
-
+		printf("Thread: %d Best Tour:\nLen = %d\n",omp_get_thread_num(),local_tour_distance);
+		//print_array(local_tour);
+		printf("\n");
+		}*/
 	}
+
+	if(my_id == 0)
+	{
+		printf("Min distance: %d\n",best_tour_distance);
+	}
+	//printf("\nNode %d Best Tour:\nLen = %d\n",my_id,global_tour_distance);
+	//print_array(global_tour);
+
+	MPI_Finalize();
 	if(map)
 		free(map);
-
+	free(gather_array);
 	return 0;
 }
