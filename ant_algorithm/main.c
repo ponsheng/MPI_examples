@@ -120,10 +120,6 @@ int cal_tour_distance(int* tour)
 
 int main(int argc,char *argv[])
 {
-	
-	read_input(INPUT_FILE);
-	srand(time(NULL));
-	
 	int comm_size_tmp;
 	int my_id;
 
@@ -131,6 +127,12 @@ int main(int argc,char *argv[])
 	MPI_Comm_size(MPI_COMM_WORLD, &comm_size_tmp);
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
 	const int comm_size = comm_size_tmp;
+
+	read_input(INPUT_FILE);
+	srand(time(NULL));
+	if(my_id == 0)
+		printf("Choosed file: %s\n\n",INPUT_FILE);	
+
 
 	gather_array = (int*) malloc(sizeof(int) * comm_size);
 
@@ -256,7 +258,7 @@ int main(int argc,char *argv[])
 				if(same_path_count > 50)
 				{
 					loop_end = 1;
-					printf("Reach terminate condition");
+					printf("Reach terminate condition\n");
 				}
 			}	
 			else
@@ -299,7 +301,9 @@ int main(int argc,char *argv[])
 
 	if(my_id == 0)
 	{
-		printf("Min distance: %d\n",best_tour_distance);
+		printf("Result best tour route: ");
+		print_array(global_tour);
+		printf("\nMin distance: %d\n",best_tour_distance);
 	}
 	//printf("\nNode %d Best Tour:\nLen = %d\n",my_id,global_tour_distance);
 	//print_array(global_tour);
