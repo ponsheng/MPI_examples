@@ -1,13 +1,13 @@
 
-PROC=16
+PROC=4
 EXE= smooth
-NSmooth=1000
+NSmooth=500
 
 $(EXE): main.cpp
-	mpiicc -g -Wall -o $(EXE) $< -DNSmooth=$(NSmooth)
+	mpic++ -g -Wall -o $(EXE) $< -DNSmooth=$(NSmooth)
 
 origin: smooth.cpp
-	mpiicc -g -Wall -o $@ $< -DNSmooth=$(NSmooth)
+	mpic++ -g -Wall -o $@ $< -DNSmooth=$(NSmooth)
 
 output1.bmp: origin
 	mpiexec -n 1 ./origin

@@ -101,11 +101,14 @@ int main(int argc,char *argv[])
 	int my_back = (my_id == comm_size-1)? 0 : my_id+1;
 
 	for(int count = 0; count < NSmooth ; count ++){
+    MPI_Request r1, r2;
 
-		MPI_Send(LOCALData[1], width*3, MPI_BYTE, my_front, 0, MPI_COMM_WORLD);
-		MPI_Send(LOCALData[height], width*3, MPI_BYTE, my_back, 1, MPI_COMM_WORLD);	
+		MPI_Isend(LOCALData[1], width*3, MPI_BYTE, my_front, 0, MPI_COMM_WORLD,&r1);
+		MPI_Isend(LOCALData[height], width*3, MPI_BYTE, my_back, 1, MPI_COMM_WORLD,&r2);	
 		MPI_Recv(LOCALData[0], width*3, MPI_BYTE, my_front, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		MPI_Recv(LOCALData[height+1], width*3, MPI_BYTE, my_back, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Wait(&r1,MPI_STATUS_IGNORE);
+    MPI_Wait(&r2,MPI_STATUS_IGNORE);
 		//進行平滑運算
 		for(int i = 1; i<height+1 ; i++)
 			for(int j =0; j<width ; j++){
