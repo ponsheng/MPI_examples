@@ -14,7 +14,7 @@
 #define NSmooth 100
 #endif
 
-void smooth(struct pixel*, struct pixel*, int, int, int);
+void smooth(struct pixel**, struct pixel**, int, int, int);
 
 int main(int argc, char *argv[]) {
     double startwtime, endwtime;
@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     UINT width, height;
     UINT x, y;
     BMP *bmp;
-    struct pixel *in, *out;
+    struct pixel **in, **out;
     int rank;
 
     MPI_Init(&argc, &argv);
@@ -52,18 +52,25 @@ int main(int argc, char *argv[]) {
 
         printf("Read bmp file %s, Depth: %d, Width: %d, Height: %d\n", 
                 argv[1], BMP_GetDepth( bmp ), width, height);
-    
-        in = (struct pixel*) malloc(height * width * sizeof(struct pixel));
-        out = (struct pixel*) malloc(height * width * sizeof(struct pixel));
+        struct pixel *tmp1, *tmp2;
+
+        tmp1 = (struct pixel*) malloc(height * width * sizeof(struct pixel));
+        tmp2 = (struct pixel*) malloc(height * width * sizeof(struct pixel));
+        in  = (struct pixel**) malloc(width * sizeof(struct pixel*));
+        out = (struct pixel**) malloc(width * sizeof(struct pixel*));
+        for (x = 0; x < width; ++x) {
+            in[x] = &(tmp1[height*x]);
+            out[x] = &(tmp2[height*x]);
+        }
 
         /* Iterate through all the image's pixels */
         for (x = 0; x < width; ++x) {
             for (y = 0; y < height; ++y) {
                 /* Get pixel's RGB values */
                 BMP_GetPixelRGB(bmp, x, y, &r, &g, &b);
-                (in+x*height+y)->r = r;
-                (in+x*height+y)->g = g;
-                (in+x*height+y)->b = b;
+                in[x][y].r = r;
+                in[x][y].g = g;
+                in[x][y].b = b;
             }
         }
         startwtime = MPI_Wtime();
@@ -78,9 +85,9 @@ int main(int argc, char *argv[]) {
         /* Iterate through all the image's pixels */
         for (x = 0; x < width; ++x) {
             for (y = 0; y < height; ++y) {
-                r = (out+x*height+y)->r;
-                g = (out+x*height+y)->g;
-                b = (out+x*height+y)->b;
+                r = out[x][y].r;
+                g = out[x][y].g;
+                b = out[x][y].b;
 
                 BMP_SetPixelRGB(bmp, x, y, r, g, b);
             }
@@ -96,9 +103,11 @@ int main(int argc, char *argv[]) {
 
         /* Free all memory allocated for the image */
         BMP_Free(bmp);
+        free(in[0]);
+        free(in);
+        free(out[0]);
+        free(out);
     }
-    free(in);
-    free(out);
     MPI_Finalize();
     return 0;
 }
